@@ -1,0 +1,8 @@
+package capacitor
+
+var (
+	FLUX_CONNECT         = "FLUX-CONNECT"
+	FLUX_TOPIC_SUBSCRIBE = "FLUX-TOPIC"
+	FLUX_MESSAGE_TEXT    = "FLUX-MSG-TXT"
+	FLUX_SYSTEM          = "SYSTEM"
+)
