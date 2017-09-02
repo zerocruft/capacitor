@@ -6,6 +6,15 @@ import (
 	"strings"
 )
 
+func FluxConnectionResponseToBytes(token string) []byte {
+	msg := string(FLUX_CONNECT) + ":{TOKEN}:{NO-TOPIC}:{NO-PAYLOAD}"
+	msg = strings.Replace(msg, "{TOKEN}", token, 1)
+	msg = strings.Replace(msg, "{NO-TOPIC}", "0", 1)
+	msg = strings.Replace(msg, "{NO-PAYLOAD}", tobase64("0"), 1)
+	return []byte(msg)
+}
+
+
 func fluxTopicSubscriptionRequestToBytes(clientToken, topic string) []byte {
 	msg := string(FLUX_TOPIC_SUBSCRIBE) + ":{TOKEN}:{TOPIC}:{NO-PAYLOAD}"
 	msg = strings.Replace(msg, "{TOKEN}", clientToken, 1)
