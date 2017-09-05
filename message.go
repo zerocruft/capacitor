@@ -14,7 +14,7 @@ func (fm FluxMessage) IsZero() bool {
 type RawFluxObject struct {
 	_clientToken []byte
 	_type        []byte
-	_data        []byte
+	_topic       []byte
 	_payload     []byte
 }
 
@@ -26,8 +26,8 @@ func (fo RawFluxObject) GetClientToken() string {
 	return string(fo._clientToken)
 }
 
-func (fo RawFluxObject) GetData() string {
-	return string(fo._data)
+func (fo RawFluxObject) GetTopic() string {
+	return string(fo._topic)
 }
 
 func (fo RawFluxObject) GetPayloadBytes() []byte {

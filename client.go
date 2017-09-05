@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"strconv"
+	"sync"
 )
 
 // Returns writeChannel, readChannel, error
@@ -54,7 +55,6 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 	go func() {
 		for {
 			newMsg := <-clientWriteChannel
-
 			flxMsgBytes := fluxMessageToBytes(fluxServiceResponse.GetClientToken(), newMsg)
 			err := conn.WriteMessage(websocket.TextMessage, flxMsgBytes)
 			if err != nil {
@@ -81,6 +81,7 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 		clientToken: fluxServiceResponse.GetClientToken(),
 		send:        &clientWriteChannel,
 		receive:     &clientReadChannel,
+		token: fluxServiceResponse.GetClientToken(),
 	}, nil
 }
 
@@ -88,6 +89,9 @@ type FluxClient struct {
 	clientToken string
 	send        *chan FluxMessage
 	receive     *chan FluxMessage
+	token string
+	closed bool
+	mutex sync.Mutex
 }
 
 func (fc *FluxClient) Send() chan FluxMessage {
@@ -96,4 +100,17 @@ func (fc *FluxClient) Send() chan FluxMessage {
 
 func (fc *FluxClient) Receive() chan FluxMessage {
 	return *fc.receive
+}
+
+func (fc *FluxClient) Close() {
+	fc.mutex.Lock()
+	defer fc.mutex.Unlock()
+
+	if fc.closed {
+		return
+	}
+	connections[fc.token].Close()
+
+	fc.closed = true
+	delete(connections, fc.token)
 }

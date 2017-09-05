@@ -55,7 +55,7 @@ func bytesToFluxObject(object []byte) (RawFluxObject, bool) {
 	flxO := RawFluxObject{
 		_type:        sections[0],
 		_clientToken: sections[1],
-		_data:        sections[2],
+		_topic:       sections[2],
 		_payload:     frombase64(sections[3]),
 	}
 
