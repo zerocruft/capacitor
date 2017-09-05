@@ -14,7 +14,6 @@ func FluxConnectionResponseToBytes(token string) []byte {
 	return []byte(msg)
 }
 
-
 func fluxTopicSubscriptionRequestToBytes(clientToken, topic string) []byte {
 	msg := string(FLUX_TOPIC_SUBSCRIBE) + ":{TOKEN}:{TOPIC}:{NO-PAYLOAD}"
 	msg = strings.Replace(msg, "{TOKEN}", clientToken, 1)

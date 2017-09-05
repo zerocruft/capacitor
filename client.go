@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// Returns writeChannel, readChannel, error
+// Returns FluxClient with a write and read channel
 func NewClient(req FluxConnectParameters) (FluxClient, error) {
 
 	fluxUrl := "ws://" + req.FluxAddress + ":" + strconv.Itoa(req.FluxPort) + "/flux"
@@ -47,9 +47,10 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 
 	clientWriteChannel := make(chan FluxMessage, 25)
 	clientReadChannel := make(chan FluxMessage, 25)
-	connections[fluxServiceResponse.GetClientToken()] = conn
-	clientWriteChannels[fluxServiceResponse.GetClientToken()] = clientWriteChannel
-	clientReadChannels[fluxServiceResponse.GetClientToken()] = clientReadChannel
+	addConnection(fluxServiceResponse.GetClientToken(), conn)
+	//connections[fluxServiceResponse.GetClientToken()] = conn
+	//clientWriteChannels[fluxServiceResponse.GetClientToken()] = clientWriteChannel
+	//clientReadChannels[fluxServiceResponse.GetClientToken()] = clientReadChannel
 
 	// Write Channel
 	go func() {
@@ -60,6 +61,7 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 			if err != nil {
 				log.Println(err)
 				conn.Close()
+				return
 			}
 		}
 	}()
@@ -72,6 +74,7 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 				log.Println(mt)
 				log.Println(err)
 				conn.Close()
+				return
 			}
 			clientReadChannel <- bytesToFluxMessage(payload)
 		}
@@ -81,7 +84,7 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 		clientToken: fluxServiceResponse.GetClientToken(),
 		send:        &clientWriteChannel,
 		receive:     &clientReadChannel,
-		token: fluxServiceResponse.GetClientToken(),
+		token:       fluxServiceResponse.GetClientToken(),
 	}, nil
 }
 
@@ -89,9 +92,13 @@ type FluxClient struct {
 	clientToken string
 	send        *chan FluxMessage
 	receive     *chan FluxMessage
-	token string
-	closed bool
-	mutex sync.Mutex
+	token       string
+	closed      bool
+	mutex       sync.Mutex
+}
+
+func (fc FluxClient) Token() string {
+	return fc.token
 }
 
 func (fc *FluxClient) Send() chan FluxMessage {
@@ -102,6 +109,10 @@ func (fc *FluxClient) Receive() chan FluxMessage {
 	return *fc.receive
 }
 
+func (fc FluxClient) AddTopic(topic string) {
+	connections[fc.token].WriteMessage(websocket.TextMessage, fluxTopicSubscriptionRequestToBytes(fc.token, topic))
+}
+
 func (fc *FluxClient) Close() {
 	fc.mutex.Lock()
 	defer fc.mutex.Unlock()
@@ -109,8 +120,7 @@ func (fc *FluxClient) Close() {
 	if fc.closed {
 		return
 	}
-	connections[fc.token].Close()
 
+	removeConnectionAfterClosing(fc.token)
 	fc.closed = true
-	delete(connections, fc.token)
 }

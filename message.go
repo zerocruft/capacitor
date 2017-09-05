@@ -11,6 +11,9 @@ func (fm FluxMessage) IsZero() bool {
 	return false
 }
 
+type fluxMessageTopicSubscribe struct {
+}
+
 type RawFluxObject struct {
 	_clientToken []byte
 	_type        []byte
