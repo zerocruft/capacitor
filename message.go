@@ -1,6 +1,7 @@
 package capacitor
 
 type FluxMessage struct {
+	Control string
 	Topic   string
 	Payload []byte
 }
@@ -15,18 +16,13 @@ type fluxMessageTopicSubscribe struct {
 }
 
 type RawFluxObject struct {
-	_clientToken []byte
-	_type        []byte
-	_topic       []byte
-	_payload     []byte
+	_control []byte
+	_topic   []byte
+	_payload []byte
 }
 
 func (fo RawFluxObject) GetType() string {
-	return string(fo._type)
-}
-
-func (fo RawFluxObject) GetClientToken() string {
-	return string(fo._clientToken)
+	return string(fo._control)
 }
 
 func (fo RawFluxObject) GetTopic() string {

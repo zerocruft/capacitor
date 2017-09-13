@@ -39,24 +39,23 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 		return FluxClient{}, errors.New("Flux Service failed to respond")
 	}
 
+	var clientToken = string(fluxServiceResponse.GetPayloadBytes())
 	//Now.. subscribe to topics
 	for _, topics := range req.Topics {
-		channelSubscribeReq := fluxTopicSubscriptionRequestToBytes(fluxServiceResponse.GetClientToken(), topics)
+		channelSubscribeReq := FluxTopicSubscriptionRequestToBytes(topics)
 		conn.WriteMessage(websocket.TextMessage, channelSubscribeReq)
 	}
 
 	clientWriteChannel := make(chan FluxMessage, 25)
 	clientReadChannel := make(chan FluxMessage, 25)
-	addConnection(fluxServiceResponse.GetClientToken(), conn)
-	//connections[fluxServiceResponse.GetClientToken()] = conn
-	//clientWriteChannels[fluxServiceResponse.GetClientToken()] = clientWriteChannel
-	//clientReadChannels[fluxServiceResponse.GetClientToken()] = clientReadChannel
+	deadConnectionChannel := make(chan bool, 1)
+	addConnection(clientToken, conn)
 
 	// Write Channel
 	go func() {
 		for {
 			newMsg := <-clientWriteChannel
-			flxMsgBytes := fluxMessageToBytes(fluxServiceResponse.GetClientToken(), newMsg)
+			flxMsgBytes := FluxMessageToBytes(newMsg)
 			err := conn.WriteMessage(websocket.TextMessage, flxMsgBytes)
 			if err != nil {
 				log.Println(err)
@@ -70,21 +69,24 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 	go func() {
 		for {
 			mt, payload, err := conn.ReadMessage()
-			if err != nil {
+			if mt != websocket.TextMessage || err != nil {
 				log.Println(mt)
 				log.Println(err)
 				conn.Close()
+				deadConnectionChannel <- true
 				return
 			}
+
 			clientReadChannel <- bytesToFluxMessage(payload)
 		}
 	}()
 
 	return FluxClient{
-		clientToken: fluxServiceResponse.GetClientToken(),
+		clientToken: clientToken,
 		send:        &clientWriteChannel,
 		receive:     &clientReadChannel,
-		token:       fluxServiceResponse.GetClientToken(),
+		token:       clientToken,
+		dead:        &deadConnectionChannel,
 	}, nil
 }
 
@@ -95,6 +97,7 @@ type FluxClient struct {
 	token       string
 	closed      bool
 	mutex       sync.Mutex
+	dead        *chan bool
 }
 
 func (fc FluxClient) Token() string {
@@ -109,8 +112,12 @@ func (fc *FluxClient) Receive() chan FluxMessage {
 	return *fc.receive
 }
 
+func (fc *FluxClient) Dead() chan bool {
+	return *fc.dead
+}
+
 func (fc FluxClient) AddTopic(topic string) {
-	connections[fc.token].WriteMessage(websocket.TextMessage, fluxTopicSubscriptionRequestToBytes(fc.token, topic))
+	connections[fc.token].WriteMessage(websocket.TextMessage, FluxTopicSubscriptionRequestToBytes(topic))
 }
 
 func (fc *FluxClient) Close() {
