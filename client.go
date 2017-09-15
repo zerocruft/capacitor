@@ -2,9 +2,9 @@ package capacitor
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
+	"net/http"
 	"strconv"
 	"sync"
 )
@@ -13,10 +13,23 @@ import (
 func NewClient(req FluxConnectParameters) (FluxClient, error) {
 
 	fluxUrl := "ws://" + req.FluxAddress + ":" + strconv.Itoa(req.FluxPort) + "/flux"
-	conn, _, err := websocket.DefaultDialer.Dial(fluxUrl, nil)
+
+	conn, resp, err := websocket.DefaultDialer.Dial(fluxUrl, nil)
 	if err != nil {
-		fmt.Println(err)
-		return FluxClient{}, err
+
+		// Follow redirect (if FLuxB is being used this is needed
+		if resp.StatusCode == http.StatusFound {
+			newUrl, err := resp.Location()
+			if err != nil {
+				return FluxClient{}, err
+			}
+			conn, _, err = websocket.DefaultDialer.Dial(newUrl.String(), nil)
+			if err != nil {
+				return FluxClient{}, err
+			}
+		} else {
+			return FluxClient{}, err
+		}
 	}
 
 	mt, payload, err := conn.ReadMessage()
@@ -82,22 +95,20 @@ func NewClient(req FluxConnectParameters) (FluxClient, error) {
 	}()
 
 	return FluxClient{
-		clientToken: clientToken,
-		send:        &clientWriteChannel,
-		receive:     &clientReadChannel,
-		token:       clientToken,
-		dead:        &deadConnectionChannel,
+		token:   clientToken,
+		send:    &clientWriteChannel,
+		receive: &clientReadChannel,
+		dead:    &deadConnectionChannel,
 	}, nil
 }
 
 type FluxClient struct {
-	clientToken string
-	send        *chan FluxMessage
-	receive     *chan FluxMessage
-	token       string
-	closed      bool
-	mutex       sync.Mutex
-	dead        *chan bool
+	send    *chan FluxMessage
+	receive *chan FluxMessage
+	token   string
+	closed  bool
+	mutex   sync.Mutex
+	dead    *chan bool
 }
 
 func (fc FluxClient) Token() string {
