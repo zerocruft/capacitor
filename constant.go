@@ -3,6 +3,7 @@ package capacitor
 var (
 	FLUX_CONNECT         = "CONN"
 	FLUX_TOPIC_SUBSCRIBE = "TOP+"
+	FLUX_TOPIC_UNSUBSCRIBE = "TOP-"
 	FLUX_MESSAGE_TEXT    = "TEXT"
-	FLUX_NODE_COM        = "NODE"
+	FLUX_PEER_CHAT       = "PEER"
 )
