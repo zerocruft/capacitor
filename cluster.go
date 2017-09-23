@@ -1,8 +1,8 @@
 package capacitor
 
 type FluxPing struct {
-	Node FluxNode `json:"node"`
-	NumberOfConnections int `json:"connections"`
+	Node                FluxNode `json:"node"`
+	NumberOfConnections int      `json:"connections"`
 }
 
 type FluxPong struct {
@@ -10,5 +10,7 @@ type FluxPong struct {
 }
 
 type FluxNode struct {
-	Address string `json:"address"`
+	ClientEndpoint string `json:"endpoint"`
+	Name           string `json:"name"`
+	PeerEndpoint   string `json:"peer-endpoint"`
 }
